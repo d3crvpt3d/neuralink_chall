@@ -39,7 +39,7 @@ fn main() {
 		.unwrap();
 
 	//print entropy of input
-	println!("Original File Size: {} Bytes\nEntropy of File: {}\nSum of Bytes: {}\nApproximated Size: {}", acc_vec.len(), entropy, sum, entropy/8f64 * sum);
+	println!("Original File Size: {} Bytes\nEntropy of File: {}\nSum of Bytes: {}\nApproximated Size: {}", acc_vec.len()*2, entropy, sum, entropy/8f64 * sum);
 
 }
 
