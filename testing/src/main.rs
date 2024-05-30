@@ -1,6 +1,6 @@
 fn main() {
  
-	let sample_vec: Vec<i16> = open_wav_file("sample.wav");
+	let sample_vec: Vec<i16> = open_wav_file("testing/sample.wav");
 
   let mut acc_vec_pos: Vec<u32> = vec![0; 32768];
 	let mut acc_vec_neg: Vec<u32> = vec![0; 32768];
@@ -19,20 +19,27 @@ fn main() {
 	let acc_vec: Vec<u32> = acc_vec_neg;
 
 	//sums all elements in accumulation vector
-	let sum = acc_vec.iter().fold(0, |acc, e| acc+*e) as f64;
+	let sum = acc_vec.iter().fold(0, |acc, e| acc + *e) as f64;
 
 	//creates the probability vector of acc_vec
 	let prob_vec: Vec<f64> = acc_vec.iter()
 		.map(|x| (*x as f64) / sum ) // div by sum of elements
 		.collect();
 
+	//dbg!(&prob_vec);
+	
+	let entropy = prob_vec.into_iter()
+		.reduce( |acc, e| 
+			if e != 0.0 {
+				return acc + e * -e.log2();
+			}else{
+				return acc;
+			}
+		 )
+		.unwrap();
 
 	//print entropy of input
-	println!("Entropy of File: {}",
-		prob_vec.into_iter()
-		.reduce( |acc, e| acc+( e*e.log2() ) )
-		.unwrap()
-	);
+	println!("Original File Size: {} Bytes\nEntropy of File: {}\nSum of Bytes: {}\nApproximated Size: {}", acc_vec.len(), entropy, sum, entropy/8f64 * sum);
 
 }
 
