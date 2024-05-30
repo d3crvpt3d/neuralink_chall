@@ -1,12 +1,41 @@
    Compiling testing v0.1.0 (Y:\code\neuralink_chall\testing)
-warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\Y:\code\neuralink_chall\target\debug\incremental\testing-1nf5s1b5uptw6\s-gwni1dchq2-1f4l5j7-working`
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\Y:\code\neuralink_chall\target\debug\incremental\testing-dj9nzkpewj82\s-gwnq6jr070-61np9r-working`
 
-warning: `testing` (bin "testing") generated 1 warning
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.71s
+warning: multiple fields are never read
+  --> testing\src\main.rs:86:2
+   |
+85 | struct Header{
+   |        ------ fields in this struct
+86 |     size: u32,
+   |     ^^^^
+87 |     format_tag: u16,
+   |     ^^^^^^^^^^
+88 |     channels: u16,
+   |     ^^^^^^^^
+89 |     sample_rate: u32,
+   |     ^^^^^^^^^^^
+90 |     bytes_second: u32,
+   |     ^^^^^^^^^^^^
+91 |     block_align: u16,
+   |     ^^^^^^^^^^^
+92 |     bits_sample: u16,
+   |     ^^^^^^^^^^^
+93 |     data_length: u32,
+   |     ^^^^^^^^^^^
+   |
+   = note: `Header` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+   = note: `#[warn(dead_code)]` on by default
+
+warning: `testing` (bin "testing") generated 2 warnings
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.77s
      Running `target\debug\testing.exe`
-[testing\src\main.rs:55:2] hound::WavReader::open(path).unwrap().spec() = WavSpec {
+[testing\src\main.rs:45:2] &wav_header = Header {
+    size: 199286,
+    format_tag: 1,
     channels: 1,
     sample_rate: 19531,
-    bits_per_sample: 16,
-    sample_format: Int,
+    bytes_second: 39062,
+    block_align: 2,
+    bits_sample: 16,
+    data_length: 199250,
 }

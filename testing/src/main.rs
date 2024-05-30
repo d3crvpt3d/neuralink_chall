@@ -1,6 +1,10 @@
+use std::io::Read;
+
+use byteorder::{ByteOrder, LittleEndian};
+
 fn main() {
  
-	let (sample_vec, specs) = open_wav_file("testing/sample.wav");
+	let (sample_vec, specs, wav_header) = open_wav_file("testing/sample.wav");
 
   let mut acc_vec_pos: Vec<u32> = vec![0; 32768];
 	let mut acc_vec_neg: Vec<u32> = vec![0; 32768];
@@ -38,22 +42,60 @@ fn main() {
 		 )
 		.unwrap();
 
+	dbg!(&wav_header);
+
 	//print entropy of input
-	println!("Original File Size: {} Bytes\n
+	println!(
+		"Original File Size: {} Bytes\n
 		Entropy of File: {}\n
-		Sum of Bytes: {}\n
-		Approximated Size: {}\n
-		Compression: {}%", specs.sample_rate * specs.bits_per_sample as u32, entropy, sum/2f64, entropy/8f64 * sum, (entropy/8f64 * sum)/(acc_vec.len()*3) as f64*100f64 );
+		Sum of Segments (u16): {}\n
+		Approximated Compressed Size: {} Bytes or {:.2}%",
+		wav_header.size+8,
+		entropy,
+		sum,
+		(entropy*sum) as u32 / 8,
+		(entropy*sum / 8f64)/wav_header.size as f64 * 100f64 );
 
 }
 
-fn open_wav_file(path: &str) -> (Vec<i16>, hound::WavSpec){
 
-	//dbg!(hound::WavReader::open(path).unwrap().spec()); //DEBUG
 
-	let mut file = hound::WavReader::open(path).unwrap();
+fn open_wav_file(path: &str) -> (Vec<i16>, hound::WavSpec, Header){
+
+	let mut file = hound::WavReader::open(path).expect("hound cant open file");
 
 	let x: Vec<i16> = file.samples().map(|x| x.unwrap()).collect();
-	dbg!(hound::WavReader::open(path).unwrap().spec());
-	(x, file.spec())
+
+
+	//get raw header from file
+	let mut header_raw: [u8; 44] = [0; 44];
+	std::fs::File::open(path).unwrap().read(&mut header_raw).expect("cant read header of wav file");
+
+	let header = Header{
+		size: LittleEndian::read_u32(&header_raw[4..8]),
+
+		format_tag: LittleEndian::read_u16(&header_raw[20..22]),
+		channels: LittleEndian::read_u16(&header_raw[22..24]),
+		sample_rate: LittleEndian::read_u32(&header_raw[24..28]),
+		bytes_second: LittleEndian::read_u32(&header_raw[28..32]),
+		block_align: LittleEndian::read_u16(&header_raw[32..34]),
+		bits_sample: LittleEndian::read_u16(&header_raw[34..36]),
+
+		data_length: LittleEndian::read_u32(&header_raw[40..44]),
+	};
+	
+
+	(x, file.spec(), header)
+}
+
+#[derive(Debug)]
+struct Header{
+	size: u32,
+	format_tag: u16,
+	channels: u16,
+	sample_rate: u32,
+	bytes_second: u32,
+	block_align: u16,
+	bits_sample: u16,
+	data_length: u32,
 }
