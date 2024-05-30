@@ -1,6 +1,6 @@
 fn main() {
  
-	let sample_vec: Vec<i16> = open_wav_file("testing/sample.wav");
+	let (sample_vec, specs) = open_wav_file("testing/sample.wav");
 
   let mut acc_vec_pos: Vec<u32> = vec![0; 32768];
 	let mut acc_vec_neg: Vec<u32> = vec![0; 32768];
@@ -8,8 +8,8 @@ fn main() {
 
 	for s in sample_vec{
 		match	(s as u16) >> 15 {
-			0 => acc_vec_pos[ (s & 0x7FFF) as usize] +=1,
-			1 => acc_vec_neg[ (s & 0x7FFF) as usize] +=1,
+			0 => acc_vec_pos[ (s & 0x7FFF) as usize] += 1,
+			1 => acc_vec_neg[ (s & 0x7FFF) as usize] += 1,
 			_ => eprintln!("matching +- failed"),
 		}
 	}
@@ -43,14 +43,17 @@ fn main() {
 		Entropy of File: {}\n
 		Sum of Bytes: {}\n
 		Approximated Size: {}\n
-		Compression: {}%", acc_vec.len()*3, entropy, sum/2f64, entropy/8f64 * sum, (entropy/8f64 * sum)/(acc_vec.len()*3) as f64*100f64 );
+		Compression: {}%", specs.sample_rate * specs.bits_per_sample as u32, entropy, sum/2f64, entropy/8f64 * sum, (entropy/8f64 * sum)/(acc_vec.len()*3) as f64*100f64 );
 
 }
 
-fn open_wav_file(path: &str) -> Vec<i16>{
+fn open_wav_file(path: &str) -> (Vec<i16>, hound::WavSpec){
 
 	//dbg!(hound::WavReader::open(path).unwrap().spec()); //DEBUG
 
-	let x: Vec<i16> = hound::WavReader::open(path).unwrap().samples().map(|x| x.unwrap()).collect();
-	x
+	let mut file = hound::WavReader::open(path).unwrap();
+
+	let x: Vec<i16> = file.samples().map(|x| x.unwrap()).collect();
+	dbg!(hound::WavReader::open(path).unwrap().spec());
+	(x, file.spec())
 }
