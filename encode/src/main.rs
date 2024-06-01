@@ -1,5 +1,9 @@
+mod rational;
+
 use std::{fs::File, io::{BufReader, Write}};
 use num_bigint::BigUint;
+
+use rational::BigRational;
 
 //ALL IS LITTLE ENDIAN
 fn main(){
@@ -13,14 +17,12 @@ fn main(){
 }
 
 
-
 fn save(buf: Vec<u8>, args: Vec<String>){
 
 	let mut file = File::create(args.get(2).unwrap()).expect("cant create Output File");
 
 	file.write_all(&buf).expect("cant write to file");
 }
-
 
 
 fn get_args() -> Vec<String>{
@@ -34,20 +36,19 @@ fn get_args() -> Vec<String>{
 	args
 }
 
-
+#[allow(unused)]
 //sequentially encodes byte Vec with arithmetic encoding
 fn encode(f: &mut BufReader<File>) -> Vec<u8>{
 	
 	let mut out_vec: Vec<u8> = Vec::new();
 
-	let mut numerator: BigUint = BigUint::ZERO;
-	let mut denominator: BigUint = BigUint::new(vec![1]);
+	let mut big_rational = BigRational::new(BigUint::new(vec![1]), BigUint::new(vec![1]));
 
+	//TODO use maybe "string_to_byte_vec"
+	f;
+	big_rational.reduce();
 	//TODO
 
-
-
-	
 	let mut header: Vec<u8> = create_arith_header(1, 1);
 
 	header.append(&mut out_vec);
@@ -55,7 +56,7 @@ fn encode(f: &mut BufReader<File>) -> Vec<u8>{
 	header
 }
 
-
+#[allow(unused)]
 // "00101010" -> 00101010u8
 fn string_to_byte_vec(string: &mut String) -> Vec<u8>{
 
