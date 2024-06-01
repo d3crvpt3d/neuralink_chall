@@ -1,9 +1,7 @@
-mod rational;
-
 use std::{fs::File, io::{BufReader, Write}};
 use num_bigint::BigUint;
 
-use rational::BigRational;
+use num_rational::Rational;
 
 //ALL IS LITTLE ENDIAN
 fn main(){
@@ -42,7 +40,7 @@ fn encode(f: &mut BufReader<File>) -> Vec<u8>{
 	
 	let mut out_vec: Vec<u8> = Vec::new();
 
-	let mut big_rational = BigRational::new(BigUint::new(vec![1]), BigUint::new(vec![1]));
+	//	let mut big_rational = BigRational::new(BigUint::new(vec![1]), BigUint::new(vec![1]));
 
 	//TODO use maybe "string_to_byte_vec"
 	f;
