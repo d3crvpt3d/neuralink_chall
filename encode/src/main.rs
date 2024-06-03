@@ -38,7 +38,7 @@ fn get_args() -> Vec<String>{
 //sequentially encodes byte Vec with arithmetic encoding
 fn encode(data: Vec<u16>) -> Vec<u8>{
 	
-	let mut out_vec: String = String::new();
+	let mut out_big_rational: BigRational = BigRational::new(13.to_bigint().unwrap(), 1.to_bigint().unwrap());
 
 	let mut frequencies: HashMap<u16, u64> = HashMap::new();
 
@@ -70,43 +70,40 @@ fn encode(data: Vec<u16>) -> Vec<u8>{
 		}
 	);
 
-	dbg!(&probabilitys); //DEBUG
+	//dbg!(&probabilitys); //DEBUG
 
 	let mut segments_top: Vec<BigRational> = Vec::new();
 	let mut tmp: BigRational = BigRational::new(0.to_bigint().unwrap(), 1.to_bigint().unwrap());
 
-	probabilitys.clone().into_iter().for_each(|e| {segments_top.push(e.clone() + tmp.clone()); tmp += e; eprintln!("{}", tmp)}); //DEBUG
+	probabilitys.clone().into_iter().for_each(|e| {
+		segments_top.push(e.clone() + tmp.clone()); tmp += e; /* eprintln!("{}", tmp) */
+	}); //DEBUG
 
 	let mut segments_bottom: Vec<BigRational> = Vec::new();
 
 	tmp = BigRational::new(0.to_bigint().unwrap(), 1.to_bigint().unwrap());
 
-	probabilitys.into_iter().for_each(|e| {segments_bottom.push(tmp.clone()); eprintln!("{}", tmp); tmp += e}); //DEBUG
+	probabilitys.into_iter().for_each(|e| {segments_bottom.push(tmp.clone()); /*eprintln!("{}", tmp) */; tmp += e}); //DEBUG
 
-
+	
+	
+	
 	//TODO
 
-	let mut header: Vec<u8> = create_arith_header(1, 1, data.len() as u64);
 
-	header.append(&mut string_to_byte_vec(&mut out_vec));
+
+	let mut data_sizes = (out_big_rational.numer().to_bytes_le().1, out_big_rational.denom().to_bytes_le().1);
+
+	let mut header: Vec<u8> = create_arith_header(
+		data_sizes.0.len() as u64,
+		data_sizes.1.len() as u64,
+		data.len() as u64
+	);
+
+	header.append(&mut data_sizes.0);
+	header.append(&mut data_sizes.1);
 
 	header
-}
-
-#[allow(unused)]
-// "00101010" -> 00101010u8
-fn string_to_byte_vec(string: &mut String) -> Vec<u8>{
-
-	//pad with zeros
-	while string.len() % 8 != 0 {
-			string.push('0');
-	}
-	
-	string.as_bytes().chunks(8)
-		.map(|chunk| std::str::from_utf8(chunk).unwrap())
-		.map(|chunk_str| u8::from_str_radix(chunk_str, 2).unwrap())
-		.collect()
-
 }
 
 
@@ -145,6 +142,7 @@ fn open_wav_file(path: &str) -> (Vec<u16>, hound::WavSpec, Header){
 	(x, file.spec(), header)
 }
 
+#[allow(unused)]
 struct Header{
 	size: u32,
 	format_tag: u16,
