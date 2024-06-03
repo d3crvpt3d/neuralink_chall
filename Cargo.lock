@@ -22,6 +22,8 @@ version = "0.1.0"
 name = "encode"
 version = "0.1.0"
 dependencies = [
+ "byteorder",
+ "hound",
  "num-bigint",
  "num-rational",
 ]

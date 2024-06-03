@@ -1,16 +1,16 @@
-use std::{fs::File, io::{BufReader, Write}};
-use num_bigint::BigUint;
-
-use num_rational::Rational;
+use std::{collections::HashMap, fs::File, io::{BufReader, Read, Write}};
+use num_bigint::{BigInt, BigUint, Sign, ToBigInt};
+use byteorder::{ByteOrder, LittleEndian};
+use num_rational::BigRational;
 
 //ALL IS LITTLE ENDIAN
 fn main(){
 
 	let args: Vec<String> = get_args();
 
-	let mut file_iterator: BufReader<File> = BufReader::new(File::open(args.get(1).unwrap()).expect("cant read File"));
+	let (sample_vec, _, _) = open_wav_file(args.get(1).unwrap());
 
-	save(encode(&mut file_iterator), args);
+	save(encode(sample_vec), args);
 
 }
 
@@ -36,20 +36,45 @@ fn get_args() -> Vec<String>{
 
 #[allow(unused)]
 //sequentially encodes byte Vec with arithmetic encoding
-fn encode(f: &mut BufReader<File>) -> Vec<u8>{
+fn encode(data: Vec<u16>) -> Vec<u8>{
 	
-	let mut out_vec: Vec<u8> = Vec::new();
+	let mut out_vec: String = String::new();
 
-	//	let mut big_rational = BigRational::new(BigUint::new(vec![1]), BigUint::new(vec![1]));
+	let mut frequencies: HashMap<u16, u64> = HashMap::with_capacity(0xFFFF);
 
-	//TODO use maybe "string_to_byte_vec"
-	f;
-	big_rational.reduce();
+	for hex in data{
+		*frequencies.get_mut(&hex).unwrap() += 1;
+	}
+
+	let freq_sum: u64 = frequencies.into_values().reduce(|acc, e| acc + e).unwrap();
+
+	let mut sorted_by_key: Vec<(u16, u64)> = frequencies.into_iter().collect();
+
+	sorted_by_key.sort_by_key(|k| k.0);
+
+	
+	let mut probabilitys: Vec<BigRational> = Vec::new();
+
+	sorted_by_key.into_iter().for_each(|x| probabilitys.push(
+		BigRational::new( 1.to_bigint().unwrap(), x.1.to_bigint().unwrap())
+	));
+
+	let mut top: Vec<BigRational>= Vec::with_capacity(0xFFFF);
+	let mut bottom: Vec<BigRational> = Vec::with_capacity(0xFFFF);
+
+
+
+	
+
 	//TODO
 
-	let mut header: Vec<u8> = create_arith_header(1, 1);
 
-	header.append(&mut out_vec);
+
+	//TODO
+
+	let mut header: Vec<u8> = create_arith_header(1, 1, 0);
+
+	header.append(&mut string_to_byte_vec(&mut out_vec));
 
 	header
 }
@@ -72,8 +97,47 @@ fn string_to_byte_vec(string: &mut String) -> Vec<u8>{
 
 
 //returns the header for arithmetic encoding in bits (header_size = 16byte)
-fn create_arith_header(numerator_length: u64, denominator_length: u64) -> Vec<u8>{
+fn create_arith_header(numerator_length: u64, denominator_length: u64, repetitions: u64) -> Vec<u8>{
 
-	[numerator_length.to_le_bytes(), denominator_length.to_le_bytes()].concat()
+	[numerator_length.to_le_bytes(), denominator_length.to_le_bytes(), repetitions.to_le_bytes()].concat()
 
+}
+
+fn open_wav_file(path: &str) -> (Vec<u16>, hound::WavSpec, Header){
+
+	let mut file = hound::WavReader::open(path).expect("hound cant open file");
+
+	let x: Vec<u16> = file.samples().map(|x| x.unwrap() as u16).collect();
+
+
+	//get raw header from file
+	let mut header_raw: [u8; 44] = [0; 44];
+	std::fs::File::open(path).unwrap().read(&mut header_raw).expect("cant read header of wav file");
+
+	let header = Header{
+		size: LittleEndian::read_u32(&header_raw[4..8]),
+
+		format_tag: LittleEndian::read_u16(&header_raw[20..22]),
+		channels: LittleEndian::read_u16(&header_raw[22..24]),
+		sample_rate: LittleEndian::read_u32(&header_raw[24..28]),
+		bytes_second: LittleEndian::read_u32(&header_raw[28..32]),
+		block_align: LittleEndian::read_u16(&header_raw[32..34]),
+		bits_sample: LittleEndian::read_u16(&header_raw[34..36]),
+
+		data_length: LittleEndian::read_u32(&header_raw[40..44]),
+	};
+	
+
+	(x, file.spec(), header)
+}
+
+struct Header{
+	size: u32,
+	format_tag: u16,
+	channels: u16,
+	sample_rate: u32,
+	bytes_second: u32,
+	block_align: u16,
+	bits_sample: u16,
+	data_length: u32,
 }
