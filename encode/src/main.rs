@@ -91,7 +91,7 @@ fn encode(data: Vec<u16>) -> Vec<u8>{
 		upper_bound = &lower_bound + &size * seg_t;
 		lower_bound = &lower_bound + &size * seg_b;
 
-		size = upper_bound - lower_bound.clone();
+		size = upper_bound.clone() - lower_bound.clone();
 		iteration += 1;
 	}
 
