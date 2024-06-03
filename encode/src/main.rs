@@ -1,5 +1,5 @@
-use std::{collections::HashMap, fs::File, io::{BufReader, Read, Write}};
-use num_bigint::{BigInt, BigUint, Sign, ToBigInt};
+use std::{collections::HashMap, fs::File, io::{Read, Write}, vec};
+use num_bigint::ToBigInt;
 use byteorder::{ByteOrder, LittleEndian};
 use num_rational::BigRational;
 
@@ -34,65 +34,70 @@ fn get_args() -> Vec<String>{
 	args
 }
 
-#[allow(unused)]
 //sequentially encodes byte Vec with arithmetic encoding
 fn encode(data: Vec<u16>) -> Vec<u8>{
 	
 	let mut out_big_rational: BigRational = BigRational::new(13.to_bigint().unwrap(), 1.to_bigint().unwrap());
 
-	let mut frequencies: HashMap<u16, u64> = HashMap::new();
+	let mut upper_bound: BigRational = BigRational::new(1.to_bigint().unwrap(), 1.to_bigint().unwrap());
+	let mut lower_bound: BigRational = BigRational::new(0.to_bigint().unwrap(), 1.to_bigint().unwrap());
 
+	//let mut last_upper_bound: BigRational = BigRational::new(1.to_bigint().unwrap(), 1.to_bigint().unwrap());
+	//let mut last_lower_bound: BigRational = BigRational::new(0.to_bigint().unwrap(), 1.to_bigint().unwrap());
+
+	let mut size: BigRational = BigRational::new(1.to_bigint().unwrap(), 1.to_bigint().unwrap());
+
+	let mut frequencies: Vec<u64> = vec![0 ; 0xF0000];
+
+	let mut iteration: u64 = 0;
+
+	//add occurences to u16 samples
 	for hex in &data{
-		//check if space is none
-		if frequencies.get(hex).is_none() {
-			frequencies.insert(*hex, 0);
-		}
-
-		*frequencies.get_mut(hex).unwrap() += 1;
+		let x = frequencies.get_mut(*hex as usize).unwrap();
+		*x += 1;
 	}
 
-	if frequencies.is_empty(){panic!("freq vec empty");} //DEBUG
+	let freq_sum: u64 = frequencies.clone().into_iter().filter(|x| *x != 0).reduce(|acc, e| acc + e).unwrap();
 
-	let freq_sum: u64 = frequencies.clone().into_values().reduce(|acc, e| acc + e).unwrap();
-
-	let mut sorted_by_key: Vec<(u16, u64)> = frequencies.iter().map(|(x, y)| (*x, *y)).collect();
-
-	sorted_by_key.sort_by_key(|k| k.0);
-
+	dbg!(&freq_sum);
 	
 	let mut probabilitys: Vec<BigRational> = Vec::new();
-
-	sorted_by_key.into_iter().for_each(|x| 
-		if x.1 != 0{
-			probabilitys.push(
-				BigRational::new( 1.to_bigint().unwrap(), x.1.to_bigint().unwrap())
-			)
-		}
-	);
-
-	//dbg!(&probabilitys); //DEBUG
+	
+	for freq in &frequencies{
+		probabilitys.push(BigRational::new(freq.clone().to_bigint().unwrap(), freq_sum.to_bigint().unwrap()));
+	}
 
 	let mut segments_top: Vec<BigRational> = Vec::new();
 	let mut tmp: BigRational = BigRational::new(0.to_bigint().unwrap(), 1.to_bigint().unwrap());
-
 	probabilitys.clone().into_iter().for_each(|e| {
-		segments_top.push(e.clone() + tmp.clone()); tmp += e; /* eprintln!("{}", tmp) */
+		segments_top.push(e.clone() + tmp.clone()); tmp += e
 	}); //DEBUG
 
+	//dbg!(&probabilitys); //DEBUG
+
 	let mut segments_bottom: Vec<BigRational> = Vec::new();
-
 	tmp = BigRational::new(0.to_bigint().unwrap(), 1.to_bigint().unwrap());
-
-	probabilitys.into_iter().for_each(|e| {segments_bottom.push(tmp.clone()); /*eprintln!("{}", tmp) */; tmp += e}); //DEBUG
-
-	
-	
-	
-	//TODO
+	probabilitys.into_iter().for_each(|e| {
+		segments_bottom.push(tmp.clone()); tmp += e
+	}); //DEBUG
 
 
+	//iteratively narrow down the span
+	for segm in &data[0..data.len()] {
 
-	let mut data_sizes = (out_big_rational.numer().to_bytes_le().1, out_big_rational.denom().to_bytes_le().1);
+		let seg_t = segments_top.get(*segm as usize).unwrap();
+		let seg_b = segments_bottom.get(*segm as usize).unwrap();
+		
+		upper_bound = &lower_bound + &size * seg_t;
+		lower_bound = &lower_bound + &size * seg_b;
+
+		size = upper_bound - lower_bound.clone();
+		iteration += 1;
+	}
+
+	//TODO: get one bigrational with fewest bits
+
+	let mut data_sizes = (upper_bound.numer().to_bytes_le().1, upper_bound.denom().to_bytes_le().1);
 
 	let mut header: Vec<u8> = create_arith_header(
 		data_sizes.0.len() as u64,
