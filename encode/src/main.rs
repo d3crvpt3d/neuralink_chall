@@ -55,24 +55,31 @@ fn encode(data: Vec<u16>) -> Vec<u8>{
 	
 	let mut probabilitys: Vec<BigRational> = Vec::new();
 
-	sorted_by_key.into_iter().for_each(|x| probabilitys.push(
-		BigRational::new( 1.to_bigint().unwrap(), x.1.to_bigint().unwrap())
-	));
+	sorted_by_key.into_iter().for_each(|x| 
+		if x.1 != 0{
+			probabilitys.push(
+				BigRational::new( 1.to_bigint().unwrap(), x.1.to_bigint().unwrap())
+			)
+		}
+	);
 
-	let mut top: Vec<BigRational>= Vec::with_capacity(0xFFFF);
-	let mut bottom: Vec<BigRational> = Vec::with_capacity(0xFFFF);
+	dbg!(&probabilitys); //DEBUG
 
+	let mut segments_top: Vec<BigRational> = Vec::new();
+	let mut tmp: BigRational = BigRational::new(0.to_bigint().unwrap(), 1.to_bigint().unwrap());
 
+	probabilitys.into_iter().for_each(|e| {segments_top.push(e + tmp); tmp += e; eprintln!("{}", tmp)}); //DEBUG
 
-	
+	let mut segments_bottom: Vec<BigRational> = Vec::new();
+
+	tmp = BigRational::new(0.to_bigint().unwrap(), 1.to_bigint().unwrap());
+
+	probabilitys.into_iter().for_each(|e| {segments_bottom.push(tmp); tmp += e; eprintln!("{}", tmp)}); //DEBUG
+
 
 	//TODO
 
-
-
-	//TODO
-
-	let mut header: Vec<u8> = create_arith_header(1, 1, 0);
+	let mut header: Vec<u8> = create_arith_header(1, 1, data.len() as u64);
 
 	header.append(&mut string_to_byte_vec(&mut out_vec));
 
@@ -97,9 +104,9 @@ fn string_to_byte_vec(string: &mut String) -> Vec<u8>{
 
 
 //returns the header for arithmetic encoding in bits (header_size = 16byte)
-fn create_arith_header(numerator_length: u64, denominator_length: u64, repetitions: u64) -> Vec<u8>{
+fn create_arith_header(numerator_length: u64, denominator_length: u64, data_length: u64) -> Vec<u8>{
 
-	[numerator_length.to_le_bytes(), denominator_length.to_le_bytes(), repetitions.to_le_bytes()].concat()
+	[numerator_length.to_le_bytes(), denominator_length.to_le_bytes(), data_length.to_le_bytes()].concat()
 
 }
 
