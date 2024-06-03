@@ -1,0 +1,49 @@
+   Compiling encode v0.1.0 (C:\Users\lyane\OneDrive\Dokumente\github_rust\neuralink_chall\encode)
+warning: unnecessary trailing semicolon
+  --> encode\src\main.rs:98:63
+   |
+98 |         segments_bottom.push(tmp.clone()); /*eprintln!("{}", tmp) */; tmp += e
+   |                                                                     ^ help: remove this semicolon
+   |
+   = note: `#[warn(redundant_semicolons)]` on by default
+
+warning: variable `iteration` is assigned to, but never used
+  --> encode\src\main.rs:52:10
+   |
+52 |     let mut iteration: u64 = 0;
+   |             ^^^^^^^^^
+   |
+   = note: consider using `_iteration` instead
+   = note: `#[warn(unused_variables)]` on by default
+
+warning: unused variable: `freq_sum`
+  --> encode\src\main.rs:65:6
+   |
+65 |     let freq_sum: u64 = frequencies.clone().into_values().reduce(|acc, e| acc + e).unwrap();
+   |         ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_freq_sum`
+
+warning: variable does not need to be mutable
+  --> encode\src\main.rs:40:6
+   |
+40 |     let mut out_big_rational: BigRational = BigRational::new(13.to_bigint().unwrap(), 1.to_bigint().unwrap());
+   |         ----^^^^^^^^^^^^^^^^
+   |         |
+   |         help: remove this `mut`
+   |
+   = note: `#[warn(unused_mut)]` on by default
+
+warning: variable does not need to be mutable
+  --> encode\src\main.rs:74:6
+   |
+74 |     let mut new_sorted_by_key: Vec<&(u16, u64)> = sorted_by_key.iter().filter(|&x| (*x).1 != 0).collect();
+   |         ----^^^^^^^^^^^^^^^^^
+   |         |
+   |         help: remove this `mut`
+
+warning: `encode` (bin "encode") generated 5 warnings (run `cargo fix --bin "encode"` to apply 3 suggestions)
+    Finished dev [unoptimized + debuginfo] target(s) in 1.96s
+     Running `target\debug\encode.exe testing/sample.wav testing/output.rae`
+thread 'main' panicked at encode\src\main.rs:105:54:
+called `Option::unwrap()` on a `None` value
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+error: process didn't exit successfully: `target\debug\encode.exe testing/sample.wav testing/output.rae` (exit code: 101)
