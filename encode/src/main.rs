@@ -40,15 +40,22 @@ fn encode(data: Vec<u16>) -> Vec<u8>{
 	
 	let mut out_vec: String = String::new();
 
-	let mut frequencies: HashMap<u16, u64> = HashMap::with_capacity(0xFFFF);
+	let mut frequencies: HashMap<u16, u64> = HashMap::new();
 
-	for hex in data{
-		*frequencies.get_mut(&hex).unwrap() += 1;
+	for hex in &data{
+		//check if space is none
+		if frequencies.get(hex).is_none() {
+			frequencies.insert(*hex, 0);
+		}
+
+		*frequencies.get_mut(hex).unwrap() += 1;
 	}
 
-	let freq_sum: u64 = frequencies.into_values().reduce(|acc, e| acc + e).unwrap();
+	if frequencies.is_empty(){panic!("freq vec empty");} //DEBUG
 
-	let mut sorted_by_key: Vec<(u16, u64)> = frequencies.into_iter().collect();
+	let freq_sum: u64 = frequencies.clone().into_values().reduce(|acc, e| acc + e).unwrap();
+
+	let mut sorted_by_key: Vec<(u16, u64)> = frequencies.iter().map(|(x, y)| (*x, *y)).collect();
 
 	sorted_by_key.sort_by_key(|k| k.0);
 
@@ -68,13 +75,13 @@ fn encode(data: Vec<u16>) -> Vec<u8>{
 	let mut segments_top: Vec<BigRational> = Vec::new();
 	let mut tmp: BigRational = BigRational::new(0.to_bigint().unwrap(), 1.to_bigint().unwrap());
 
-	probabilitys.into_iter().for_each(|e| {segments_top.push(e + tmp); tmp += e; eprintln!("{}", tmp)}); //DEBUG
+	probabilitys.clone().into_iter().for_each(|e| {segments_top.push(e.clone() + tmp.clone()); tmp += e; eprintln!("{}", tmp)}); //DEBUG
 
 	let mut segments_bottom: Vec<BigRational> = Vec::new();
 
 	tmp = BigRational::new(0.to_bigint().unwrap(), 1.to_bigint().unwrap());
 
-	probabilitys.into_iter().for_each(|e| {segments_bottom.push(tmp); tmp += e; eprintln!("{}", tmp)}); //DEBUG
+	probabilitys.into_iter().for_each(|e| {segments_bottom.push(tmp.clone()); eprintln!("{}", tmp); tmp += e}); //DEBUG
 
 
 	//TODO
@@ -114,7 +121,7 @@ fn open_wav_file(path: &str) -> (Vec<u16>, hound::WavSpec, Header){
 
 	let mut file = hound::WavReader::open(path).expect("hound cant open file");
 
-	let x: Vec<u16> = file.samples().map(|x| x.unwrap() as u16).collect();
+	let x: Vec<u16> = file.samples::<i16>().map(|x| x.unwrap() as u16).collect();
 
 
 	//get raw header from file
