@@ -102,7 +102,7 @@ fn encode(data: Vec<u16>) -> Vec<u8>{
 	let mut header: Vec<u8> = create_arith_header(
 		data_sizes.0.len() as u64,
 		data_sizes.1.len() as u64,
-		data.len() as u64
+		(data_sizes.0.len() + data_sizes.1.len()) as u64,
 	);
 
 	header.append(&mut data_sizes.0);
