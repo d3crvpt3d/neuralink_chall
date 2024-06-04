@@ -1,7 +1,6 @@
 # Maybe a good Arithmetic Encoding Implementation used for the neuralink_challenge: May 2024
 
-Own lossles implementation of Arithmetic Encoding
-
+Own lossles implementation of Arithmetic Encoding [Wikipedia](https://en.wikipedia.org/wiki/Arithmetic_coding)
 - Supported Files
   - [x] riff wav
     - [x] 16bit
