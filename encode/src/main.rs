@@ -95,7 +95,10 @@ fn encode(data: Vec<u16>) -> Vec<u8>{
 		iteration += 1;
 	}
 
-	//TODO: get one bigrational with fewest bits
+	//convert bound of rationals to integer
+	
+	//TODO
+
 
 	let mut data_sizes = (upper_bound.numer().to_bytes_le().1, upper_bound.denom().to_bytes_le().1);
 
