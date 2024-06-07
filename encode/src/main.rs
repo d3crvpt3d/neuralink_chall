@@ -1,7 +1,6 @@
-use std::{collections::HashMap, fs::File, io::{Read, Write}, vec};
-use num_bigint::ToBigInt;
+use std::{fs::File, io::{Read, Write}};
 use byteorder::{ByteOrder, LittleEndian};
-use num_rational::BigRational;
+use num_rational::Rational32;
 
 //ALL IS LITTLE ENDIAN
 fn main(){
@@ -10,7 +9,7 @@ fn main(){
 
 	let (sample_vec, _, _) = open_wav_file(args.get(1).unwrap());
 
-	save(encode(sample_vec), args);
+	save(encode<i16,16>(sample_vec), args);
 
 }
 
@@ -34,84 +33,55 @@ fn get_args() -> Vec<String>{
 	args
 }
 
+fn probability_num_denom(in_data: &Vec<i16>) -> (Vec<u64>, u64){
+
+	let mut denom: u64 = 0;
+
+	let mut out_vec: Vec<u64> = [0; 65535].into_iter().collect();
+
+	in_data.iter().for_each(|&e| {
+
+		if *out_vec.get(e as usize).unwrap() == 0{
+			denom += 1;
+			
+			let x = out_vec.get_mut(e as usize).unwrap();
+			*x += 1;
+		}
+
+	});
+
+	return (Vec::new(), denom);
+}
+
 //sequentially encodes byte Vec with arithmetic encoding
-fn encode(data: Vec<u16>) -> Vec<u8>{
-	
-	let mut out_big_rational: BigRational = BigRational::new(13.to_bigint().unwrap(), 1.to_bigint().unwrap());
-
-	let mut upper_bound: BigRational = BigRational::new(1.to_bigint().unwrap(), 1.to_bigint().unwrap());
-	let mut lower_bound: BigRational = BigRational::new(0.to_bigint().unwrap(), 1.to_bigint().unwrap());
-
-	//let mut last_upper_bound: BigRational = BigRational::new(1.to_bigint().unwrap(), 1.to_bigint().unwrap());
-	//let mut last_lower_bound: BigRational = BigRational::new(0.to_bigint().unwrap(), 1.to_bigint().unwrap());
-
-	let mut size: BigRational = BigRational::new(1.to_bigint().unwrap(), 1.to_bigint().unwrap());
-
-	let mut frequencies: Vec<u64> = vec![0 ; 0xF0000];
-
-	let mut iteration: u64 = 0;
-
-	//add occurences to u16 samples
-	for hex in &data{
-		let x = frequencies.get_mut(*hex as usize).unwrap();
-		*x += 1;
-	}
-
-	let freq_sum: u64 = frequencies.clone().into_iter().filter(|x| *x != 0).reduce(|acc, e| acc + e).unwrap();
-
-	dbg!(&freq_sum);
-	
-	let mut probabilitys: Vec<BigRational> = Vec::new();
-	
-	for freq in &frequencies{
-		probabilitys.push(BigRational::new(freq.clone().to_bigint().unwrap(), freq_sum.to_bigint().unwrap()));
-	}
-
-	let mut segments_top: Vec<BigRational> = Vec::new();
-	let mut tmp: BigRational = BigRational::new(0.to_bigint().unwrap(), 1.to_bigint().unwrap());
-	probabilitys.clone().into_iter().for_each(|e| {
-		segments_top.push(e.clone() + tmp.clone()); tmp += e
-	}); //DEBUG
-
-	//dbg!(&probabilitys); //DEBUG
-
-	let mut segments_bottom: Vec<BigRational> = Vec::new();
-	tmp = BigRational::new(0.to_bigint().unwrap(), 1.to_bigint().unwrap());
-	probabilitys.into_iter().for_each(|e| {
-		segments_bottom.push(tmp.clone()); tmp += e
-	}); //DEBUG
-
-
-	//iteratively narrow down the span
-	for segm in &data[0..data.len()] {
-
-		let seg_t = segments_top.get(*segm as usize).unwrap();
-		let seg_b = segments_bottom.get(*segm as usize).unwrap();
-		
-		upper_bound = &lower_bound + &size * seg_t;
-		lower_bound = &lower_bound + &size * seg_b;
-
-		size = upper_bound.clone() - lower_bound.clone();
-		iteration += 1;
-	}
-
-	//convert bound of rationals to integer
+fn encode(data: Vec<i16>) -> Vec<u8>{
 	
 	//TODO
 
+	let (map, denom) = probability_num_denom(&data);
 
-	let mut data_sizes = (upper_bound.numer().to_bytes_le().1, upper_bound.denom().to_bytes_le().1);
+	let mut top = Rational32::new(1, 1);
+	let mut bot = Rational32::new(0, 1);
 
-	let mut header: Vec<u8> = create_arith_header(
-		data_sizes.0.len() as u64,
-		data_sizes.1.len() as u64,
-		(data_sizes.0.len() + data_sizes.1.len()) as u64,
-	);
 
-	header.append(&mut data_sizes.0);
-	header.append(&mut data_sizes.1);
+	data.iter().for_each(|e| {
 
-	header
+
+
+		let diff = top - bot;
+
+	});
+
+
+
+
+
+
+
+
+
+
+	create_arith_header(1, 1, 1)
 }
 
 
