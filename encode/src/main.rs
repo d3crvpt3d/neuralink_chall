@@ -9,7 +9,7 @@ fn main(){
 
 	let (sample_vec, _, _) = open_wav_file(args.get(1).unwrap());
 
-	save(encode<i16,16>(sample_vec), args);
+	save(encode(sample_vec), args);
 
 }
 
@@ -33,24 +33,30 @@ fn get_args() -> Vec<String>{
 	args
 }
 
-fn probability_num_denom(in_data: &Vec<i16>) -> (Vec<u64>, u64){
+fn nums_pos_and_denom(in_data: &Vec<i16>) -> (Vec<(u64,u64)>, u64){
 
 	let mut denom: u64 = 0;
 
-	let mut out_vec: Vec<u64> = [0; 65535].into_iter().collect();
+	let mut out_vec: Vec<(u64,u64)> = [(0, 0); 65535].into_iter().collect();
 
 	in_data.iter().for_each(|&e| {
 
-		if *out_vec.get(e as usize).unwrap() == 0{
+		if (*out_vec.get(e as usize).unwrap()).0 == 0{
 			denom += 1;
-			
-			let x = out_vec.get_mut(e as usize).unwrap();
-			*x += 1;
 		}
+
+		let x = out_vec.get_mut(e as usize).unwrap().0;
+		x += 1;
+
+		for (idx, _) in out_vec.iter().enumerate(){
+			let k = out_vec.get_mut(idx).unwrap();
+			k.1 += out_vec.get(idx - 1).unwrap_or(&(0, 0)).0 + out_vec.get(idx - 1).unwrap_or(&(0, 0)).1;
+		}
+
 
 	});
 
-	return (Vec::new(), denom);
+	return (out_vec, denom); // out_vec:(occurences, u_pos)
 }
 
 //sequentially encodes byte Vec with arithmetic encoding
@@ -58,7 +64,7 @@ fn encode(data: Vec<i16>) -> Vec<u8>{
 	
 	//TODO
 
-	let (map, denom) = probability_num_denom(&data);
+	let (nums, denom) = nums_pos_and_denom(&data);
 
 	let mut top = Rational32::new(1, 1);
 	let mut bot = Rational32::new(0, 1);
@@ -92,11 +98,11 @@ fn create_arith_header(numerator_length: u64, denominator_length: u64, data_leng
 
 }
 
-fn open_wav_file(path: &str) -> (Vec<u16>, hound::WavSpec, Header){
+fn open_wav_file(path: &str) -> (Vec<i16>, hound::WavSpec, Header){
 
 	let mut file = hound::WavReader::open(path).expect("hound cant open file");
 
-	let x: Vec<u16> = file.samples::<i16>().map(|x| x.unwrap() as u16).collect();
+	let x: Vec<i16> = file.samples::<i16>().map(|x| x.unwrap()).collect();
 
 
 	//get raw header from file
