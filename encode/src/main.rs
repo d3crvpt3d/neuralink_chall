@@ -50,24 +50,35 @@ fn nums_pos_and_denom(path: &str) -> HashMap<u16, Segment>{
 //sequentially encodes byte Vec with arithmetic encoding
 fn encode(data: Vec<i16>) -> Vec<u8>{
 	
-	//TODO
+	let mut writer = Vec::new();
 
 	let segments: HashMap<u16, Segment> = nums_pos_and_denom("table.aet");
 
 	let mut o: u64 = segments.len() as u64; //upper bound
-	let mut u: u64 = 0u64; //lower bound
-	let mut s: u64 = o; //size
+	let mut s: u64 = 1u64;
+	let mut u: u64 = 0u64;
 
+	let denom: u64 = o; //lower bound //size
 
-	data.iter().for_each(|e| {
+	//NEEDS INTENSIVE TESTING
+	data.iter().for_each(|&e| {
 
-		//TODO
+		o = u + segments.get(&(e as u16)).unwrap().top;
+		u = u + segments.get(&(e as u16)).unwrap().bottom;
+		s = s * segments.get(&(e as u16)).unwrap().size;
 
+		//fix large numbers
+		while (!(o ^ u)) & (s >> 1) == denom {
+			write!(&mut writer, "{}", o & (s >> 1)).expect("cant write to writer");
+	
+			o = o >> 1;
+			u = u >> 1;
+			s = s << 1;
+		}
 	});
 
+	[create_arith_header(segments.len() as u64), writer].concat()
 
-
-	create_arith_header(data.len() as u64)
 }
 
 

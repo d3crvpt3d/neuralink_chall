@@ -19,8 +19,11 @@ fn open_wav_file(path: &str) -> Vec<i16>{
 
 fn create_table(vec: &Vec<i16>) -> HashMap<u16, Segment>{
 
-    //TODO
+    let map: HashMap<u16, Segment> = HashMap::new();
 
+    todo!("create a lut for upper-/lower-bound and ");
+
+    map
 }
 
 fn write_to_file(map: HashMap<u16, Segment>){
@@ -28,7 +31,7 @@ fn write_to_file(map: HashMap<u16, Segment>){
 
     let mut file = File::create("table.aet").expect("cant open file table.aet");
 
-    write!(file, "{}", serialized);
+    write!(file, "{}", serialized).expect("cant write to file");
 
 }
 
