@@ -3,14 +3,15 @@ use serde::{Serialize, Deserialize};
 use serde_json;
 
 fn main() {
-    let vec = open_wav_file("samples/512.wav");
+    
+    let args: Vec<String> = std::env::args().collect();
+
+    let vec = open_wav_file(args.get(1).expect("./create_table <file.wav> [<output file.aet>]"));
 
     let mut out_path = "table.aet";
 
-    let args: Vec<String> = std::env::args().collect();
-
-    if args.len() >= 3{
-        out_path = args.get(3).unwrap();
+    if args.len() == 3{
+        out_path = args.get(2).unwrap();
     }
 
     write_to_file(create_table(&vec), out_path);
@@ -48,8 +49,7 @@ fn create_table(vec: &Vec<i16>) -> HashMap<u16, Segment>{
     let mut u: u64 = 0;
     let mut o: u64 = 0;
 
-    let mut freq_vec: Vec<(usize, u64)> = freq.into_iter().collect();
-    freq_vec.sort_unstable();
+    let freq_vec: Vec<(usize, u64)> = freq.into_iter().collect();
     
     freq_vec.into_iter().for_each(|e|{
         
@@ -71,6 +71,8 @@ fn write_to_file(map: HashMap<u16, Segment>, path: &str){
     let serialized = serde_json::to_string(&map).expect("cant convert json to HashMap");
 
     let mut stream = BufWriter::new(File::create(path).expect("cant open file table.aet"));
+
+    dbg!(&serialized);
 
     write!(stream, "{}", serialized).expect("cant write to file");
 

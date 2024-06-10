@@ -11,7 +11,11 @@ fn main(){
 
 	let mut buf_write: BufWriter<File> = BufWriter::new(File::create(args.get(2).unwrap()).expect("cant create Output File"));
 
-	encode(sample_vec, &mut buf_write);
+	if args.len() == 4{
+		encode(sample_vec, &mut buf_write, args.get(3).expect("arg 3 is no String"));
+	}else {
+		encode(sample_vec, &mut buf_write, "table.aet");
+	}
 }
 
 
@@ -19,8 +23,8 @@ fn get_args() -> Vec<String>{
 
 	let args: Vec<String> = std::env::args().collect();
 
-	if args.len() != 3 {
-		panic!("Args length should be 3 not {}", args.len());
+	if args.len() < 3 {
+		panic!("Args length should be at least 3 not {}", args.len());
 	}
 
 	args
@@ -40,9 +44,9 @@ fn nums_pos_and_denom(path: &str) -> HashMap<u16, Segment>{
 
 
 //sequentially encodes byte Vec with arithmetic encoding
-fn encode<W: Write>(data: Vec<i16>, stream: &mut BufWriter<W>){
+fn encode<W: Write>(data: Vec<i16>, stream: &mut BufWriter<W>, path: &str){
 
-	let segments: HashMap<u16, Segment> = nums_pos_and_denom("table.aet");
+	let segments: HashMap<u16, Segment> = nums_pos_and_denom(path);
 
 	stream.write_all(&create_arith_header(segments.len() as u64)).expect("cant write header");
 
@@ -60,13 +64,15 @@ fn encode<W: Write>(data: Vec<i16>, stream: &mut BufWriter<W>){
 		u = u + segments.get(&(e as u16)).unwrap().bottom;
 		s = s * segments.get(&(e as u16)).unwrap().size;
 
+		dbg!(o, u, s, o & (s >> 1));
+
 		//fix large numbers
 		while (!(o ^ u)) & (s >> 1) == denom {
 			write!(stream, "{}", o & (s >> 1)).expect("cant write to writer");
 	
 			o = o >> 1;
 			u = u >> 1;
-			s = s << 1;
+			s = s >> 1;
 		}
 
 	});
