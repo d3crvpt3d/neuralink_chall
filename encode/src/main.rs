@@ -1,5 +1,6 @@
 use std::{fs::File, io::{BufWriter, Read, Write}};
 use hashbrown::HashMap;
+use num_rational::Rational32;
 use serde::{Serialize, Deserialize};
 
 //ALL IS LITTLE ENDIAN
@@ -50,30 +51,16 @@ fn encode<W: Write>(data: Vec<i16>, stream: &mut BufWriter<W>, path: &str){
 
 	stream.write_all(&create_arith_header(segments.len() as u64)).expect("cant write header");
 
-	let mut o: u64 = segments.len() as u64; //upper bound
-	let mut s: u64 = 1u64; //size
-	let mut u: u64 = 0u64; //lower bound 
+	let mut o: Rational32 = Rational32::new(1, 1); //upper bound
+	let mut s: Rational32 = Rational32::new(1, 1); //size
+	let mut u: Rational32 = Rational32::new(0, 1); //lower bound 
 
-	let denom: u64 = o;
+	let denom: u64 = segments.len() as u64;
 
 	//NEEDS INTENSIVE TESTING
 	data.iter().for_each(|&e| {
 
-		//if this throws an error it should crash please
-		o = u + segments.get(&(e as u16)).unwrap().top;
-		u = u + segments.get(&(e as u16)).unwrap().bottom;
-		s = s * segments.get(&(e as u16)).unwrap().size;
-
-		dbg!(o, u, s, o & (s >> 1));
-
-		//fix large numbers
-		while (!(o ^ u)) & (s >> 1) == denom {
-			write!(stream, "{}", o & (s >> 1)).expect("cant write to writer");
-	
-			o = o >> 1;
-			u = u >> 1;
-			s = s >> 1;
-		}
+		todo!("needs fix");
 
 	});
 
