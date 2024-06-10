@@ -1,5 +1,4 @@
-use std::{fs::File, io::{BufReader, Read, Write}};
-use num_rational::Rational32;
+use std::{fs::File, io::{BufWriter, Read, Write}};
 use hashbrown::HashMap;
 use serde::{Serialize, Deserialize};
 
@@ -8,18 +7,11 @@ fn main(){
 
 	let args: Vec<String> = get_args();
 
-	let sample_vec = open_wav_file(args.get(1).unwrap());
+	let sample_vec: Vec<i16> = open_wav_file(args.get(1).unwrap());
 
-	save(encode(sample_vec), args);
+	let mut buf_write: BufWriter<File> = BufWriter::new(File::create(args.get(2).unwrap()).expect("cant create Output File"));
 
-}
-
-
-fn save(buf: Vec<u8>, args: Vec<String>){
-
-	let mut file = File::create(args.get(2).unwrap()).expect("cant create Output File");
-
-	file.write_all(&buf).expect("cant write to file");
+	encode(sample_vec, &mut buf_write);
 }
 
 
@@ -37,8 +29,8 @@ fn get_args() -> Vec<String>{
 //read lookup table (I LOVE SERDE AND HASHBROWN)
 fn nums_pos_and_denom(path: &str) -> HashMap<u16, Segment>{
 
-	let mut file = File::open(path).expect("cant read json file");
-  let mut contents = String::new();
+	let mut file: File = File::open(path).expect("cant read json file");
+  let mut contents: String = String::new();
   file.read_to_string(&mut contents).expect("file is not json");
 
 	let map: HashMap<u16, Segment> = serde_json::from_str(&contents).expect("Failed to deserialize HashMap");
@@ -48,37 +40,38 @@ fn nums_pos_and_denom(path: &str) -> HashMap<u16, Segment>{
 
 
 //sequentially encodes byte Vec with arithmetic encoding
-fn encode(data: Vec<i16>) -> Vec<u8>{
-	
-	let mut writer = Vec::new();
+fn encode<W: Write>(data: Vec<i16>, stream: &mut BufWriter<W>){
 
 	let segments: HashMap<u16, Segment> = nums_pos_and_denom("table.aet");
 
-	let mut o: u64 = segments.len() as u64; //upper bound
-	let mut s: u64 = 1u64;
-	let mut u: u64 = 0u64;
+	stream.write_all(&create_arith_header(segments.len() as u64)).expect("cant write header");
 
-	let denom: u64 = o; //lower bound //size
+	let mut o: u64 = segments.len() as u64; //upper bound
+	let mut s: u64 = 1u64; //size
+	let mut u: u64 = 0u64; //lower bound 
+
+	let denom: u64 = o;
 
 	//NEEDS INTENSIVE TESTING
 	data.iter().for_each(|&e| {
 
+		//if this throws an error it should crash please
 		o = u + segments.get(&(e as u16)).unwrap().top;
 		u = u + segments.get(&(e as u16)).unwrap().bottom;
 		s = s * segments.get(&(e as u16)).unwrap().size;
 
 		//fix large numbers
 		while (!(o ^ u)) & (s >> 1) == denom {
-			write!(&mut writer, "{}", o & (s >> 1)).expect("cant write to writer");
+			write!(stream, "{}", o & (s >> 1)).expect("cant write to writer");
 	
 			o = o >> 1;
 			u = u >> 1;
 			s = s << 1;
 		}
+
 	});
 
-	[create_arith_header(segments.len() as u64), writer].concat()
-
+	stream.flush().unwrap();
 }
 
 
@@ -108,16 +101,6 @@ struct Header{
 	block_align: u16,
 	bits_sample: u16,
 	data_length: u32,
-}
-
-impl Segment {
-		fn new(bottom: u64, top: u64, size: u64) -> Self{
-			Segment{
-				bottom,
-				top,
-				size,
-			}
-		}
 }
 
 #[derive(Serialize, Deserialize, Debug)]

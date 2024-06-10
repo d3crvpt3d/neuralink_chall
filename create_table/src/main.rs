@@ -1,11 +1,19 @@
-use std::{collections::HashMap, fs::File, io::Write};
+use std::{collections::HashMap, fs::File, io::{BufWriter, Write}};
 use serde::{Serialize, Deserialize};
 use serde_json;
 
 fn main() {
-    let vec = open_wav_file("table.aet");
+    let vec = open_wav_file("samples/512.wav");
 
-    write_to_file(create_table(&vec));
+    let mut out_path = "table.aet";
+
+    let args: Vec<String> = std::env::args().collect();
+
+    if args.len() >= 3{
+        out_path = args.get(3).unwrap();
+    }
+
+    write_to_file(create_table(&vec), out_path);
 }
 
 fn open_wav_file(path: &str) -> Vec<i16>{
@@ -19,19 +27,52 @@ fn open_wav_file(path: &str) -> Vec<i16>{
 
 fn create_table(vec: &Vec<i16>) -> HashMap<u16, Segment>{
 
-    let map: HashMap<u16, Segment> = HashMap::new();
+    let mut map: HashMap<u16, Segment> = HashMap::new();
 
-    todo!("create a lut for upper-/lower-bound and ");
+    let mut freq: HashMap<usize, u64> = HashMap::new();
+
+    //get occurences of segments into freq vec
+    vec.iter().for_each(|&e| {
+
+        let segment: usize = e as usize;
+
+        //make sure key exists
+        if !freq.contains_key(&segment){
+            freq.insert(segment, 0);
+        }
+
+        let x = freq.get_mut(&segment).unwrap();
+        *x += 1;
+    });
+
+    let mut u: u64 = 0;
+    let mut o: u64 = 0;
+
+    let mut freq_vec: Vec<(usize, u64)> = freq.into_iter().collect();
+    freq_vec.sort_unstable();
+    
+    freq_vec.into_iter().for_each(|e|{
+        
+        o = o + e.1;
+
+        map.insert(
+            e.0 as u16,
+            Segment::new(u, o, o-u)
+        );
+
+        u = o;
+
+    });
 
     map
 }
 
-fn write_to_file(map: HashMap<u16, Segment>){
+fn write_to_file(map: HashMap<u16, Segment>, path: &str){
     let serialized = serde_json::to_string(&map).expect("cant convert json to HashMap");
 
-    let mut file = File::create("table.aet").expect("cant open file table.aet");
+    let mut stream = BufWriter::new(File::create(path).expect("cant open file table.aet"));
 
-    write!(file, "{}", serialized).expect("cant write to file");
+    write!(stream, "{}", serialized).expect("cant write to file");
 
 }
 
@@ -40,4 +81,14 @@ struct Segment{
 	bottom: u64,
 	top: u64,
 	size: u64,
+}
+
+impl Segment {
+    fn new(bottom: u64, top: u64, size: u64) -> Self{
+        Segment{
+            bottom,
+            top,
+            size,
+        }
+    }
 }
