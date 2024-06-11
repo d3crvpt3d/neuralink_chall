@@ -9,7 +9,7 @@ Own lossles implementation of Arithmetic Encoding [Wikipedia](https://en.wikiped
 -  [x] Encoding
    - [x] Arithmetic Encoding
      - [ ] Recursive
-     - [ ] Efficient
+     - [ ] Efficient (currently working on it..)
      - [x] Stream Support
    - [ ] Huffman Encoding
      - [ ] Recursive

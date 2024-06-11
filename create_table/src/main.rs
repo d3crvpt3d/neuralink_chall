@@ -26,7 +26,7 @@ fn open_wav_file(path: &str) -> Vec<i16>{
 	x
 }
 
-fn create_table(vec: &Vec<i16>) -> HashMap<u16, Segment>{
+fn create_table(vec: &Vec<i16>) -> (HashMap<u16, Segment>, usize){
 
     let mut map: HashMap<u16, Segment> = HashMap::new();
 
@@ -64,10 +64,10 @@ fn create_table(vec: &Vec<i16>) -> HashMap<u16, Segment>{
 
     });
 
-    map
+    (map, vec.len())
 }
 
-fn write_to_file(map: HashMap<u16, Segment>, path: &str){
+fn write_to_file(map: (HashMap<u16, Segment>, usize), path: &str){
     let serialized = serde_json::to_string(&map).expect("cant convert json to HashMap");
 
     let mut stream = BufWriter::new(File::create(path).expect("cant open file table.aet"));

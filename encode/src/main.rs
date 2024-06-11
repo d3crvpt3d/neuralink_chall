@@ -33,13 +33,13 @@ fn get_args() -> Vec<String>{
 }
 
 //read lookup table (I LOVE SERDE AND HASHBROWN)
-fn nums_pos_and_denom(path: &str) -> HashMap<u16, Segment>{
+fn nums_pos_and_denom(path: &str) -> (HashMap<u16, Segment>, usize){
 
 	let mut file: File = File::open(path).expect("cant read json file");
   let mut contents: String = String::new();
   file.read_to_string(&mut contents).expect("file is not json");
 
-	let map: HashMap<u16, Segment> = serde_json::from_str(&contents).expect("Failed to deserialize HashMap");
+	let map: (HashMap<u16, Segment>, usize) = serde_json::from_str(&contents).expect("Failed to deserialize HashMap");
 
 	map
 }
@@ -48,9 +48,7 @@ fn nums_pos_and_denom(path: &str) -> HashMap<u16, Segment>{
 //sequentially encodes byte Vec with arithmetic encoding
 fn encode<W: Write>(data: Vec<i16>, stream: &mut BufWriter<W>, path: &str){
 
-	let segments: HashMap<u16, Segment> = nums_pos_and_denom(path); //TODO: save bigrational instead of struct Segment
-
-	let num_segments: usize = segments.len();
+	let (segments, num_segments) = nums_pos_and_denom(path); //TODO: save bigrational instead of struct Segment
 
 	stream.write_all(&create_arith_header(num_segments as u64)).expect("cant write header");
 
@@ -59,7 +57,7 @@ fn encode<W: Write>(data: Vec<i16>, stream: &mut BufWriter<W>, path: &str){
 	let mut remaining_bytes_in_buf: u8 = 8;
 
 	let mut o: BigRational = BigRational::from_integer(BigInt::from(1)); //upper bound
-	//let mut s: BigRational = BigRational::from_integer(BigInt::from(1)); //size
+	let mut s: BigRational = BigRational::from_integer(BigInt::from(1)); //size
 	let mut u: BigRational = BigRational::from_integer(BigInt::from(0)); //lower bound
 
 	let one_half: BigRational = BigRational::new(BigInt::from(1), BigInt::from(2));
@@ -81,19 +79,19 @@ fn encode<W: Write>(data: Vec<i16>, stream: &mut BufWriter<W>, path: &str){
 		);
 
 
-		o = &o * &curr_upper;
-		u = &o * &curr_lower;
-
+		o = &u + &s * &curr_upper;
+		u = &u + &s * &curr_lower;
+		s = &s * (&o-&u);
 
 		//optimize output: get stream by byte and trim size of rationals
-		if u <= one_half && o <= one_half{
+		if &u <= &one_half && &o <= &one_half{
 
 			remaining_bytes_in_buf -= 1; // equal to put 0 at the position
 	
 			//scale [0, .5] to [0, 1]
 			u = &u * &two;
 			o = &o * &two;
-		}else if u >= one_half && o >= one_half{
+		}else if &u >= &one_half && &o >= &one_half{
 
 			byte_buffer[0] += 1 << (remaining_bytes_in_buf-1);// put element on right position
 			remaining_bytes_in_buf -= 1;
@@ -103,7 +101,7 @@ fn encode<W: Write>(data: Vec<i16>, stream: &mut BufWriter<W>, path: &str){
 			o = (&o - &one_half) * &two;
 		}
 
-		//flush byte_buffer[0]
+		//flush buffer
 		if remaining_bytes_in_buf == 0{
 			stream.write_all(&byte_buffer).expect("cant write a full byte to output");
 			byte_buffer[0] = 0;
