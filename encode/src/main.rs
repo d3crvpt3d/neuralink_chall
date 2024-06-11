@@ -1,6 +1,7 @@
 use std::{fs::File, io::{BufWriter, Read, Write}};
 use hashbrown::HashMap;
-use num_rational::Rational32;
+use num_bigint::BigInt;
+use num_rational::BigRational;
 use serde::{Serialize, Deserialize};
 
 //ALL IS LITTLE ENDIAN
@@ -51,16 +52,64 @@ fn encode<W: Write>(data: Vec<i16>, stream: &mut BufWriter<W>, path: &str){
 
 	stream.write_all(&create_arith_header(segments.len() as u64)).expect("cant write header");
 
-	let mut o: Rational32 = Rational32::new(1, 1); //upper bound
-	let mut s: Rational32 = Rational32::new(1, 1); //size
-	let mut u: Rational32 = Rational32::new(0, 1); //lower bound 
+	let mut byte_buffer: [u8; 1] = [8]; //stores each not full byte. zB. '1','1','0' => [0,0,0,0,0,0,0,0] -> [1,1,0,0,0,0,0,0]
 
-	let denom: u64 = segments.len() as u64;
+	let mut remaining_bytes_in_buf: u8 = 0;
+
+	let mut o: BigRational = BigRational::from_integer(BigInt::from(1)); //upper bound
+	//let mut s: BigRational = BigRational::from_integer(BigInt::from(1)); //size
+	let mut u: BigRational = BigRational::from_integer(BigInt::from(0)); //lower bound
+
+	let one_half: BigRational = BigRational::new(BigInt::from(1), BigInt::from(2));
+	let two: BigRational = BigRational::new(BigInt::from(2), BigInt::from(1));
 
 	//NEEDS INTENSIVE TESTING
 	data.iter().for_each(|&e| {
 
-		todo!("needs fix");
+		let ee = &(e as u16);
+
+		let curr_upper = BigRational::new(
+			BigInt::from(segments.get(ee).unwrap().top),
+			BigInt::from(segments.len())
+		);
+
+		let curr_lower = BigRational::new(
+			BigInt::from(segments.get(ee).unwrap().bottom),
+			BigInt::from(segments.len())
+		);
+
+
+		//todo!("calculate new upper/lower bound");
+		o = &o * &curr_upper;
+		u = &o * &curr_lower;
+
+		//get stream by byte and trim size of rationals
+		while (u <= one_half && o <= one_half) || (u >= one_half && o >= one_half){
+
+			if u <= one_half && o <= one_half{
+
+				remaining_bytes_in_buf -= 1;
+		
+				//scale [0, .5] to [0, 1]
+				u = &u * &two;
+				o = &o * &two;
+			}else if u >= one_half && o >= one_half{
+
+				byte_buffer[0] += 1 << (remaining_bytes_in_buf-1);// put element on right position
+				remaining_bytes_in_buf -= 1;
+		
+				//scale [.5, 1] to [0, 1]
+				u = (&u - &one_half) * &two;
+				o = (&o - &one_half) * &two;
+			}
+
+			//flush byte_buffer[0]
+			if remaining_bytes_in_buf == 0{
+				stream.write_all(&byte_buffer).expect("cant write a full byte to output");
+				remaining_bytes_in_buf = 8;
+			}
+
+		}
 
 	});
 
