@@ -32,7 +32,7 @@ fn get_args() -> Vec<String>{
 	args
 }
 
-//read lookup table (I LOVE SERDE AND HASHBROWN)
+//read lookup table
 fn nums_pos_and_denom(path: &str) -> (HashMap<u16, Segment>, usize){
 
 	let mut file: File = File::open(path).expect("cant read json file");
@@ -63,8 +63,14 @@ fn encode<W: Write>(data: Vec<i16>, stream: &mut BufWriter<W>, path: &str){
 	let one_half: BigRational = BigRational::new(BigInt::from(1), BigInt::from(2));
 	let two: BigRational = BigRational::new(BigInt::from(2), BigInt::from(1));
 
+	eprint!("Progress(*/20): |");
+	let counter: usize = 0;
 	//NEEDS INTENSIVE TESTING
 	data.iter().for_each(|&e| {
+
+		if counter % (data.len()/20) == 0{
+			eprint!("-");
+		}
 
 		let ee = &(e as u16);
 
@@ -104,11 +110,14 @@ fn encode<W: Write>(data: Vec<i16>, stream: &mut BufWriter<W>, path: &str){
 		//flush buffer
 		if remaining_bytes_in_buf == 0{
 			stream.write_all(&byte_buffer).expect("cant write a full byte to output");
+			stream.flush().unwrap();
 			byte_buffer[0] = 0;
 			remaining_bytes_in_buf = 8;
 		}
 
 	});
+
+	eprint!("|\n");
 	stream.write_all(&byte_buffer).expect("cant write a full byte to output");
 	stream.flush().unwrap();
 }
