@@ -10,12 +10,11 @@ Own lossles implementation of Arithmetic Encoding [Wikipedia](https://en.wikiped
    - [x] Arithmetic Encoding
      - [ ] Recursive
      - [ ] Efficient
-     - [ ] Stream Support
+     - [x] Stream Support
    - [ ] Huffman Encoding
      - [ ] Recursive
      - [ ] Efficient
      - [ ] Stream Support
-   - [ ] Write denom in Decimal Format (0.)1000101011010
 -  [ ] Decoding
    - [ ] Arithmetic Encoding
      - [ ] Efficient
@@ -24,34 +23,32 @@ Own lossles implementation of Arithmetic Encoding [Wikipedia](https://en.wikiped
 ## Needs
 Rust (Cargo)
 
-## Run without Compiling
-```cargo run --bin <encode/decode> <in.rae> <out.rae>```
+### Create lookup-table
 
-## Compiling:
-```cargo build``` or ```cargo build --bin <encode/decode>```
+```./create_table <input.wav> [<table.aet>]```
+
+### Compiling:
+```cargo build``` or ```cargo build --bin <encode/decode/create_table>```
+
+### Run without Compiling
+```cargo run --bin <encode/decode> <in.rae> <out.rae> [<table.aet>]```
 
 ## Running
 ### Encode:
 ```
-./encode <in.wav> <out.rae>
+./encode <in.wav> <out.rae> [<table.aet>]
 ```
 ### Decode:
 ```
-./decode <in.rae> <out.wav>
+./decode <in.rae> <out.wav> [<table.aet>]
 ```
 
 ## compressed File Header documentation
 
-Little Endian
+(0-16) Little Endian
+(data) 101 = .625
 
-| Offset				  | Length					| Data            |
-|-----------------|-----------------|-----------------|
-| 0 	(0x00)			|	8						  	|	\<nom size\>    |
-| 8 	(0x08)			|	8								| \<denom size\>  |
-| 16 	(0x10)			|	8								| \<data size\>   |
-| 24 	(0x18)			|	\<nom size\>	  | \<nominator\>   |
-| 24+\<nom size\> |	\<denom size\>  | \<denominator\> |
-
-## Lookup Table Header documentation
-
-hashbrown serialized with serde_json
+| Offset				  | Length              | Data              |
+|-----------------|---------------------|-------------------|
+| 0 	(0x00)			|	8 (u64)             |	\<num elements\>  |
+| 8 	(0x08)			| \<num elements\>/8  | \<data\>          |

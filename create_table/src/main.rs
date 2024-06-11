@@ -72,8 +72,6 @@ fn write_to_file(map: HashMap<u16, Segment>, path: &str){
 
     let mut stream = BufWriter::new(File::create(path).expect("cant open file table.aet"));
 
-    dbg!(&serialized);
-
     write!(stream, "{}", serialized).expect("cant write to file");
 
 }

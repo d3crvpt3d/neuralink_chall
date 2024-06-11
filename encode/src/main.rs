@@ -48,13 +48,15 @@ fn nums_pos_and_denom(path: &str) -> HashMap<u16, Segment>{
 //sequentially encodes byte Vec with arithmetic encoding
 fn encode<W: Write>(data: Vec<i16>, stream: &mut BufWriter<W>, path: &str){
 
-	let segments: HashMap<u16, Segment> = nums_pos_and_denom(path);
+	let segments: HashMap<u16, Segment> = nums_pos_and_denom(path); //TODO: save bigrational instead of struct Segment
 
-	stream.write_all(&create_arith_header(segments.len() as u64)).expect("cant write header");
+	let num_segments: usize = segments.len();
 
-	let mut byte_buffer: [u8; 1] = [8]; //stores each not full byte. zB. '1','1','0' => [0,0,0,0,0,0,0,0] -> [1,1,0,0,0,0,0,0]
+	stream.write_all(&create_arith_header(num_segments as u64)).expect("cant write header");
 
-	let mut remaining_bytes_in_buf: u8 = 0;
+	let mut byte_buffer: [u8; 1] = [0]; //stores each not full byte. zB. '1','1','0' => [0,0,0,0,0,0,0,0] -> [1,1,0,0,0,0,0,0]
+
+	let mut remaining_bytes_in_buf: u8 = 8;
 
 	let mut o: BigRational = BigRational::from_integer(BigInt::from(1)); //upper bound
 	//let mut s: BigRational = BigRational::from_integer(BigInt::from(1)); //size
@@ -70,49 +72,46 @@ fn encode<W: Write>(data: Vec<i16>, stream: &mut BufWriter<W>, path: &str){
 
 		let curr_upper = BigRational::new(
 			BigInt::from(segments.get(ee).unwrap().top),
-			BigInt::from(segments.len())
+			BigInt::from(num_segments)
 		);
 
 		let curr_lower = BigRational::new(
 			BigInt::from(segments.get(ee).unwrap().bottom),
-			BigInt::from(segments.len())
+			BigInt::from(num_segments)
 		);
 
 
-		//todo!("calculate new upper/lower bound");
 		o = &o * &curr_upper;
 		u = &o * &curr_lower;
 
-		//get stream by byte and trim size of rationals
-		while (u <= one_half && o <= one_half) || (u >= one_half && o >= one_half){
 
-			if u <= one_half && o <= one_half{
+		//optimize output: get stream by byte and trim size of rationals
+		if u <= one_half && o <= one_half{
 
-				remaining_bytes_in_buf -= 1;
-		
-				//scale [0, .5] to [0, 1]
-				u = &u * &two;
-				o = &o * &two;
-			}else if u >= one_half && o >= one_half{
+			remaining_bytes_in_buf -= 1; // equal to put 0 at the position
+	
+			//scale [0, .5] to [0, 1]
+			u = &u * &two;
+			o = &o * &two;
+		}else if u >= one_half && o >= one_half{
 
-				byte_buffer[0] += 1 << (remaining_bytes_in_buf-1);// put element on right position
-				remaining_bytes_in_buf -= 1;
-		
-				//scale [.5, 1] to [0, 1]
-				u = (&u - &one_half) * &two;
-				o = (&o - &one_half) * &two;
-			}
+			byte_buffer[0] += 1 << (remaining_bytes_in_buf-1);// put element on right position
+			remaining_bytes_in_buf -= 1;
+	
+			//scale [.5, 1] to [0, 1]
+			u = (&u - &one_half) * &two;
+			o = (&o - &one_half) * &two;
+		}
 
-			//flush byte_buffer[0]
-			if remaining_bytes_in_buf == 0{
-				stream.write_all(&byte_buffer).expect("cant write a full byte to output");
-				remaining_bytes_in_buf = 8;
-			}
-
+		//flush byte_buffer[0]
+		if remaining_bytes_in_buf == 0{
+			stream.write_all(&byte_buffer).expect("cant write a full byte to output");
+			byte_buffer[0] = 0;
+			remaining_bytes_in_buf = 8;
 		}
 
 	});
-
+	stream.write_all(&byte_buffer).expect("cant write a full byte to output");
 	stream.flush().unwrap();
 }
 
