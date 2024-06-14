@@ -19,4 +19,4 @@ jobs:
     - name: Build
       run: cargo build --verbose
     - name: Run tests
-      run: cargo test --bin encode "samples/512.wav" "samples/out_512.rae"
+      run: cargo test --bin encode "samples/abac.wav" "samples/abac.rae"
