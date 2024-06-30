@@ -1,8 +1,7 @@
 use std::{fs::File, io::{BufWriter, Read, Write}};
 use hashbrown::HashMap;
-use num_bigint::BigInt;
-use num_rational::BigRational;
 use serde::{Serialize, Deserialize};
+use num_rational::Rational64;
 
 //ALL IS LITTLE ENDIAN
 fn main(){
@@ -56,15 +55,16 @@ fn encode<W: Write>(data: Vec<i16>, stream: &mut BufWriter<W>, path: &str){
 
 	let mut remaining_bytes_in_buf: u8 = 8;
 
-	let mut o: BigRational = BigRational::from_integer(BigInt::from(1)); //upper bound
-	let mut s: BigRational = BigRational::from_integer(BigInt::from(1)); //size
-	let mut u: BigRational = BigRational::from_integer(BigInt::from(0)); //lower bound
+	let mut o: Rational64 = Rational64::new(1, 1); //upper bound
+	let mut s: Rational64 = Rational64::new(1, 1); //size
+	let mut u: Rational64 = Rational64::new(0, 1); //lower bound
 
-	let one_half: BigRational = BigRational::new(BigInt::from(1), BigInt::from(2));
-	let two: BigRational = BigRational::new(BigInt::from(2), BigInt::from(1));
+  let half = Rational64::new(1, 2);
 
 	eprint!("Progress(*/20): |");
-	let counter: usize = 0;
+	
+  let counter: usize = 0;
+
 	//NEEDS INTENSIVE TESTING
 	data.iter().for_each(|&e| {
 
@@ -72,40 +72,39 @@ fn encode<W: Write>(data: Vec<i16>, stream: &mut BufWriter<W>, path: &str){
 			eprint!("-");
 		}
 
-		let ee = &(e as u16);
+    let ee = e as u16;
 
-		let curr_upper = BigRational::new(
-			BigInt::from(segments.get(ee).unwrap().top),
-			BigInt::from(num_segments)
-		);
+		let curr_upper: Rational64 = Rational64::new(
+      segments.get(&ee).unwrap().top as i64,
+      num_segments as i64
+    );
 
-		let curr_lower = BigRational::new(
-			BigInt::from(segments.get(ee).unwrap().bottom),
-			BigInt::from(num_segments)
-		);
+    let curr_lower = Rational64::new(
+      segments.get(&ee).unwrap().bottom as i64,
+      num_segments as i64
+    );
 
-
+    //calculate new position
 		o = &u + &s * &curr_upper;
 		u = &u + &s * &curr_lower;
 		s = &s * (&o-&u);
 
-		//optimize output: get stream by byte and trim size of rationals
-		if &u <= &one_half && &o <= &one_half{
+		
+    while o.numer() * 2 <= *o.denom(){//<= 0.5
+      o *= 2;
+      u *= 2;
 
-			remaining_bytes_in_buf -= 1; // equal to put 0 at the position
-	
-			//scale [0, .5] to [0, 1]
-			u = &u * &two;
-			o = &o * &two;
-		}else if &u >= &one_half && &o >= &one_half{
+			remaining_bytes_in_buf -= 1;//put 0
+    }
 
-			byte_buffer[0] += 1 << (remaining_bytes_in_buf-1);// put element on right position
-			remaining_bytes_in_buf -= 1;
-	
-			//scale [.5, 1] to [0, 1]
-			u = (&u - &one_half) * &two;
-			o = (&o - &one_half) * &two;
-		}
+    while u.numer() * 2 >= *o.denom() {
+      o = (o - half) * 2;// (x - 1/2) * 2
+      u = (u - half) * 2;
+
+      byte_buffer[0] += 1 << (remaining_bytes_in_buf-1);////put 1
+      remaining_bytes_in_buf -= 1;
+    }
+
 
 		//flush buffer
 		if remaining_bytes_in_buf == 0{
