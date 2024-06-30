@@ -61,16 +61,8 @@ fn encode<W: Write>(data: Vec<i16>, stream: &mut BufWriter<W>, path: &str){
 
   let half = Rational64::new(1, 2);
 
-	eprint!("Progress(*/20): |");
-	
-  let counter: usize = 0;
-
 	//NEEDS INTENSIVE TESTING
 	data.iter().for_each(|&e| {
-
-		if counter % (data.len()/20) == 0{
-			eprint!("-");
-		}
 
     let ee = e as u16;
 
@@ -90,14 +82,14 @@ fn encode<W: Write>(data: Vec<i16>, stream: &mut BufWriter<W>, path: &str){
 		s = &s * (&o-&u);
 
 		
-    while o.numer() * 2 <= *o.denom(){//<= 0.5
+    if o.numer() * 2 <= *o.denom(){//<= 0.5
       o *= 2;
       u *= 2;
 
 			remaining_bytes_in_buf -= 1;//put 0
     }
 
-    while u.numer() * 2 >= *o.denom() {
+    if u.numer() * 2 >= *o.denom() {
       o = (o - half) * 2;// (x - 1/2) * 2
       u = (u - half) * 2;
 
